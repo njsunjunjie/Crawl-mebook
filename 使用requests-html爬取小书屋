@@ -1,0 +1,63 @@
+'''
+我的小书屋网站上的书籍非常不错，一直想爬取下来，慢慢阅读;
+但每次下载一本书都需要打开3~4个网页才能进入百度网盘下载；
+想实现自动化一次性把全站的书籍爬取下来，但我的计算机水平太差，
+目前只能用我学的皮毛之python先爬取了第一部分：
+    就是将书籍的名称、百度网盘地址和百度网盘的密码对应爬取了下来。
+    爬取的效果：《舞台生活四十年：梅兰芳回忆录》 https://pan.baidu.com/s/1pfNr21dl9BUfO1XUJaBBKQ   jnpo
+               《利文沃兹案》                 https://pan.baidu.com/s/17-kglPWypF4SLavSKkrOiA   oojw
+
+如何利用已有的百度网盘和密码实现自动化爬取，恳请同仁帮忙完善为感！
+同时，下面的文档需要完善的地方也烦请帮忙指正。
+
+具体实现说明：
+1、尝试着使用requests-html库来爬取
+2、先从首页的书籍列表爬取单一书籍的链接地址：start_request(self,url)
+3、从单一书籍介绍网页通过“点击下载”按钮进入到有百度网盘和密码的网页：find_data(self,url)
+4、从有百度网盘和密码网页爬取书籍名称、网盘地址和网盘密码，并保存为mebook.txt文件:pan_data(self,url)
+5、最后通过主函数来实现全站的爬取
+''' 
+
+
+from requests_html import HTMLSession
+import os
+import time
+session=HTMLSession()
+
+class Spider(object):
+    def start_request(self,url):
+        response=session.get(url)
+        href_list=response.html.xpath('//div[@class="content "]/h2/a/@href')
+        for href in href_list:
+            self.find_data(href)
+    
+
+    def find_data(self,url):
+        response=session.get(url)        
+        downbtnhref_list=response.html.xpath('//a[@class="downbtn"]/@href')
+        for downbtnhref in downbtnhref_list:
+            self.pan_data(downbtnhref)
+
+
+    def pan_data(self,url):
+        response=session.get(url)
+        bookname=response.html.xpath('/html/body/div[3]/p[1]/text()')[0][5:]
+        password=response.html.xpath('/html/body/div[3]/p[6]/text()')[0][12:16]
+        pan_href=response.html.xpath('//div[@class="list"]/a[1]/@href')[0]
+        print(bookname,pan_href,password)
+        with open('mebook.txt',"a",encoding="utf-8") as f:
+            f.write(bookname)
+            f.write(pan_href)
+            f.write(password)
+            f.write('\n')
+             
+def main():
+    spider=Spider() 
+    for page in range(1,5): #截至到2018年12月17日该网站共有813页，先用前4月测试一下效果
+            url = 'http://mebook.cc/page/' + str(page)
+            spider.start_request(url)
+            time.sleep(1)
+
+
+if __name__=='__main__':      
+    main()
